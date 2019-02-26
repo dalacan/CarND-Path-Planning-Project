@@ -15,6 +15,7 @@ const float EFFICIENCY = pow(10, 5);
 const float LANE_CHANGE = pow(10, 5);
 const float OUT_OF_LANE = pow(10, 7);
 const float CHANGE_LANE_SAFE = pow(10,5);
+const float LANE_COST = pow(10,3);
 
 float inefficiency_cost(const Vehicle &vehicle,
                         const vector<Vehicle> &trajectory,
@@ -22,16 +23,13 @@ float inefficiency_cost(const Vehicle &vehicle,
                         map<string, float> &data) {
   // Cost becomes higher for trajectories with intended lane and final lane
   //   that have traffic slower than vehicle's target speed.
-  // You can use the lane_speed function to determine the speed for a lane.
-  // This function is very similar to what you have already implemented in
-  //   the "Implement a Second Cost Function in C++" quiz.
   Vehicle vehicle_ahead;
   float proposed_speed_intended = -1;
   if(get_vehicle_ahead(predictions, data["intended_lane"], vehicle_ahead)) {
     proposed_speed_intended = vehicle_ahead.v;
   }
 
-  std::cout << "lane: " << data["intended_lane"] << " proposed_speed_intended: " << proposed_speed_intended << std::endl;
+//  std::cout << "lane: " << data["intended_lane"] << " proposed_speed_intended: " << proposed_speed_intended << std::endl;
   if (proposed_speed_intended < 0 || proposed_speed_intended > vehicle.target_speed) {
     proposed_speed_intended = vehicle.target_speed;
   }
@@ -40,7 +38,7 @@ float inefficiency_cost(const Vehicle &vehicle,
   if(get_vehicle_ahead(predictions, data["final_lane"], vehicle_ahead)) {
     proposed_speed_final = vehicle_ahead.v;
   }
-  std::cout << "lane: " << data["final_lane"] << " proposed_speed_final: " << proposed_speed_final << std::endl;
+//  std::cout << "lane: " << data["final_lane"] << " proposed_speed_final: " << proposed_speed_final << std::endl;
   if (proposed_speed_final < 0 || proposed_speed_final > vehicle.target_speed) {
     proposed_speed_final = vehicle.target_speed;
   }
@@ -48,9 +46,9 @@ float inefficiency_cost(const Vehicle &vehicle,
   float cost = (2.0*vehicle.target_speed - proposed_speed_intended
                 - proposed_speed_final)/vehicle.target_speed;
 
-  std::cout << "vehicle.target_speed: " << vehicle.target_speed << std::endl;
+//  std::cout << "vehicle.target_speed: " << vehicle.target_speed << std::endl;
 
-  std::cout << "inefficiency_cost: " << cost << std::endl;
+//  std::cout << "inefficiency_cost: " << cost << std::endl;
 
   return cost;
 }
@@ -59,6 +57,7 @@ float lane_change_cost(const Vehicle &vehicle,
                        const vector<Vehicle> &trajectory,
                        const map<int, vector<Vehicle>> &predictions,
                        map<string, float> &data) {
+  // Add a cost to changing lane relative to the distance to vehicle current and the intended lane
 
   Vehicle vehicle_ahead;
   double vehicle_ahead_distance = 9999;
@@ -69,8 +68,8 @@ float lane_change_cost(const Vehicle &vehicle,
       vehicle_ahead_distance = vehicle_ahead.s - vehicle.s;
     }
   }
-  std::cout << "vehicle_ahead_distance: " << vehicle_ahead_distance << std::endl;
-  std::cout << "Vehicle lane: " << vehicle.lane << " intended lane: " << data["intended_lane"]  << " final lane: " << data["final_lane"] << std::endl;
+//  std::cout << "vehicle_ahead_distance: " << vehicle_ahead_distance << std::endl;
+//  std::cout << "Vehicle lane: " << vehicle.lane << " intended lane: " << data["intended_lane"]  << " final lane: " << data["final_lane"] << std::endl;
 
   double intended_lane_vehicle_ahead_distance = 9999;
   if(get_vehicle_ahead(predictions, (int)data["intended_lane"], vehicle_ahead)) {
@@ -79,7 +78,7 @@ float lane_change_cost(const Vehicle &vehicle,
 
   float cost = (double)abs(vehicle.lane - data["intended_lane"]) * 0.5 * ((1 - exp(-vehicle_ahead_distance/300.0)) + exp(-intended_lane_vehicle_ahead_distance/30.0));
 
-  std::cout << "lane_change_cost: " << cost << std::endl;
+//  std::cout << "lane_change_cost: " << cost << std::endl;
 
   return cost;
 
@@ -89,13 +88,14 @@ float out_of_lane_cost(const Vehicle &vehicle,
                        const vector<Vehicle> &trajectory,
                        const map<int, vector<Vehicle>> &predictions,
                        map<string, float> &data) {
+  // Add a cost for being out of lane
 
   float cost = 0;
   if(data["intended_lane"] >= vehicle.num_lanes || data["intended_lane"] < 0) {
     cost = 1;
   }
 
-  std::cout << "out_of_lane_cost: " << cost << std::endl;
+//  std::cout << "out_of_lane_cost: " << cost << std::endl;
 
   return cost;
 }
@@ -108,7 +108,6 @@ float change_lane_safe_cost(const Vehicle &vehicle,
   float cost = 0;
   if(vehicle.lane != data["intended_lane"]  ||  vehicle.lane != data["final_lane"]) {
     cost = 1;
-    float min_gap_size = 15;
     double gap_dist = 1;
     // Attempt to find a next to vehicle
     Vehicle vehicle_ahead;
@@ -121,7 +120,7 @@ float change_lane_safe_cost(const Vehicle &vehicle,
     if(!vehicle_ahead_bool && !vehicle_behind_bool) {
       // No vehicle in intended lane
       cost = 0;
-      std::cout << "gap found - No vehicle ahead of behind" << std::endl;
+//      std::cout << "gap found - No vehicle ahead of behind" << std::endl;
     }
     else if(vehicle_ahead_bool && !vehicle_behind_bool) {
       // Vehicle ahead but no vehicle behind, check if distance to closest vehicle in front has sufficient gap relative to ego
@@ -132,9 +131,9 @@ float change_lane_safe_cost(const Vehicle &vehicle,
         gap_dist = vehicle_ahead.s - vehicle.s;
       }
 
-      if(gap_dist > min_gap_size/2.0) {
+      if(gap_dist > vehicle.min_gap/2.0) {
         cost = 1/gap_dist;
-        std::cout << "gap found - Vehicle ahead but no vehicle behind" << std::endl;
+//        std::cout << "gap found - Vehicle ahead but no vehicle behind" << std::endl;
       }
     } else if(vehicle_behind_bool && !vehicle_ahead_bool) {
       // Vehicle behind but no vehicle ahead, check if distance to closest vehicle behind has sufficient gap to ego relative to ego
@@ -145,11 +144,11 @@ float change_lane_safe_cost(const Vehicle &vehicle,
         gap_dist = vehicle.s - vehicle_behind.s;
       }
 
-      if(gap_dist > min_gap_size/2.0) {
+      if(gap_dist > vehicle.min_gap/2.0) {
         cost = 1/gap_dist;
-        std::cout << "gap found - Vehicle behind but no vehicle ahead" << std::endl;
+//        std::cout << "gap found - Vehicle behind but no vehicle ahead" << std::endl;
       }
-    } else if(vehicle_ahead_bool && vehicle_behind_bool && (vehicle_ahead.s - vehicle_behind.s)> min_gap_size) {
+    } else if(vehicle_ahead_bool && vehicle_behind_bool) {
       // Vehicle ahead and behind, check if gap between both vehicle have a sufficient gap
       if(vehicle_ahead.s < 300 && vehicle_behind.s > vehicle_behind.max_s - 300) {
         // Handle wrap aground
@@ -158,14 +157,26 @@ float change_lane_safe_cost(const Vehicle &vehicle,
         gap_dist = vehicle_ahead.s - vehicle_behind.s;
       }
 
-      if(gap_dist > min_gap_size) {
+      if(gap_dist > vehicle.min_gap) {
         cost = 1 / gap_dist;
-        std::cout << "gap found - Vehicle ahead and vehicle behind" << std::endl;
+//        std::cout << "gap found - Vehicle ahead and vehicle behind" << std::endl;
       }
     }
   }
 
-  std::cout << "change_lane_safe_cost: " << cost << std::endl;
+//  std::cout << "change_lane_safe_cost: " << cost << std::endl;
+
+  return cost;
+}
+
+float lane_cost(const Vehicle &vehicle,
+                const vector<Vehicle> &trajectory,
+                const map<int, vector<Vehicle>> &predictions,
+                map<string, float> &data) {
+  // Favor middle lane
+  float cost = pow((vehicle.lane - 1), 2);
+
+//  std::cout << "lane_cost: " << cost << std::endl;
 
   return cost;
 }
@@ -227,8 +238,6 @@ bool get_vehicle_behind(const map<int, vector<Vehicle>> &predictions, int lane, 
     }
   }
 
-  if(found_vehicle) { std::cout << "Found vehicle behind" << std::endl; }
-
   return found_vehicle;
 }
 
@@ -244,8 +253,8 @@ float CalculateCost(const Vehicle &vehicle,
   vector<std::function<float(const Vehicle &, const vector<Vehicle> &,
                              const map<int, vector<Vehicle>> &,
                              map<string, float> &)
-  >> cf_list = {inefficiency_cost, lane_change_cost, out_of_lane_cost, change_lane_safe_cost};
-  vector<float> weight_list = {EFFICIENCY, LANE_CHANGE, OUT_OF_LANE, CHANGE_LANE_SAFE};
+  >> cf_list = {inefficiency_cost, lane_change_cost, out_of_lane_cost, change_lane_safe_cost, lane_cost};
+  vector<float> weight_list = {EFFICIENCY, LANE_CHANGE, OUT_OF_LANE, CHANGE_LANE_SAFE, LANE_COST};
 
   for (int i = 0; i < cf_list.size(); ++i) {
     float new_cost = weight_list[i]*cf_list[i](vehicle, trajectory, predictions,

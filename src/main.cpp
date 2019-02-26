@@ -36,38 +36,12 @@ int main() {
 
   // Waypoint map to read from
   string map_file_ = "../data/highway_map.csv";
-//  // The max s value before wrapping around the track back to 0
-//  double max_s = 6945.554;
-//
-//  std::ifstream in_map_(map_file_.c_str(), std::ifstream::in);
-//
-//  string line;
-//  while (getline(in_map_, line)) {
-//    std::istringstream iss(line);
-//    double x;
-//    double y;
-//    float s;
-//    float d_x;
-//    float d_y;
-//    iss >> x;
-//    iss >> y;
-//    iss >> s;
-//    iss >> d_x;
-//    iss >> d_y;
-//    map_waypoints_x.push_back(x);
-//    map_waypoints_y.push_back(y);
-//    map_waypoints_s.push_back(s);
-//    map_waypoints_dx.push_back(d_x);
-//    map_waypoints_dy.push_back(d_y);
-//  }
 
-  std::cout << "Loading highway" << std::endl;
+  // Load highway
   Highway highway;
   highway.LoadWaypoints("../data/highway_map.csv");
-  std::cout << "End Loading highway" << std::endl;
 
   // Initialize highway driving class
-  std::cout << "Planner(highway)" << std::endl;
   Planner planner = Planner(highway);
 
   // starting lane
@@ -120,31 +94,19 @@ int main() {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-          /**
-           * TODO: define a path made up of (x,y) points that the car will visit
-           *   sequentially every .02 seconds
-           */
-
-
           // Set ego vehicle
-          std::cout << "Set ego" << std::endl;
           string prev_state = "CS";
           Vehicle previous_ego;
 
-          std::cout << "car_speed: " << car_speed << std::endl;
-
           planner.SetEgo(car_x, car_y, car_s, car_d, car_yaw, car_speed/2.24, previous_path_x, previous_path_y);
 
-          // Add sensor fusion
-          std::cout << "Add sensor fusion" << std::endl;
+          // Update sensor fusion
           planner.UpdateDetectedVehicles(sensor_fusion);
 
           // Generate predictions
-          std::cout << "Generating predictions" << std::endl;
           planner.GeneratePredictions();
 
           // Choose next state behavior
-          std::cout << "Plan behavior" << std::endl;
           planner.PlanBehavior();
 
           // Generate optimal trajectory for selected state & prepare path plan

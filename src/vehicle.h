@@ -62,6 +62,7 @@ public:
   string state;
 
   double max_s = 6945.554;
+  double min_gap = 15.0;
 
   map<string, int> lane_direction = {{"PLCL", -1}, {"LCL", -1},
                                      {"LCR", 1}, {"PLCR", 1}};

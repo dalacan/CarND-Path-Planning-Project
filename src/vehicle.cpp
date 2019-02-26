@@ -94,10 +94,9 @@ vector<Vehicle> Vehicle::ChooseNextState(map<int, vector<Vehicle>> &predictions)
 
     // Generate trajectory for each succorstates
     for(int i=0; i<success_states.size(); i++) {
-        std::cout << "Calculating trajectory for: " << success_states[i] << std::endl;
+//        std::cout << "Calculating trajectory for: " << success_states[i] << std::endl;
         trajectory_for_state = GenerateTrajectory(success_states[i], predictions);
         if (trajectory_for_state.size() != 0) {
-//            std::cout << "Trajectory: " << trajectory_for_state.size() << std::endl;
             // Calculate cost for each successor state
             cost_for_state.push_back(CalculateCost(*this, predictions, trajectory_for_state));
             final_trajectories.push_back(trajectory_for_state);
@@ -110,7 +109,7 @@ vector<Vehicle> Vehicle::ChooseNextState(map<int, vector<Vehicle>> &predictions)
     // Choose lowest cost state
     for(int i=0; i<cost_for_state.size(); i++) {
         cost = cost_for_state[i];
-        std::cout << "State: " << success_states[i] << " Cost: " << cost << std::endl;
+//        std::cout << "State: " << success_states[i] << " Cost: " << cost << std::endl;
         if(cost < min_cost) {
             min_cost = cost;
             best_state_idx = i;
@@ -118,7 +117,7 @@ vector<Vehicle> Vehicle::ChooseNextState(map<int, vector<Vehicle>> &predictions)
     }
 
 
-    std::cout << "Choosen state: " << success_states[best_state_idx] << std::endl;
+//    std::cout << "Choosen state: " << success_states[best_state_idx] << std::endl;
     return  final_trajectories[best_state_idx];
 }
 
@@ -187,14 +186,13 @@ vector<Vehicle> Vehicle::KeepLaneTrajectory(map<int, vector<Vehicle>> &predictio
     double new_v = kinematics[1];
     double new_a = kinematics[2];
 
-    std::cout << "Keep Lane Traj (s, v, a): " << new_s << ", " << new_v << ", " << new_a << std::endl;
+//    std::cout << "Keep Lane Traj (s, v, a): " << new_s << ", " << new_v << ", " << new_a << std::endl;
     trajectory.push_back(Vehicle(this->lane, new_s, new_v, new_a, "KL"));
 
     return trajectory;
 }
 
 vector<Vehicle> Vehicle::LaneChangeTrajectory(string state, map<int, vector<Vehicle>> &predictions) {
-    double min_gap_size = 15.0;
     // Generate a lane change trajectory.
     int new_lane = this->lane + lane_direction[state];
     vector<Vehicle> trajectory;
@@ -204,9 +202,9 @@ vector<Vehicle> Vehicle::LaneChangeTrajectory(string state, map<int, vector<Vehi
     for (map<int, vector<Vehicle>>::iterator it = predictions.begin();
          it != predictions.end(); ++it) {
         next_lane_vehicle = it->second[0];
-        if (next_lane_vehicle.s < this->s+min_gap_size/2 && next_lane_vehicle.s > this->s-min_gap_size/2 && next_lane_vehicle.lane == new_lane) {
+        if (next_lane_vehicle.s < this->s+min_gap/2 && next_lane_vehicle.s > this->s-min_gap/2 && next_lane_vehicle.lane == new_lane) {
             // If lane change is not possible, return empty trajectory.
-            std::cout << "Lane change not possible" << std::endl;
+//            std::cout << "Lane change not possible" << std::endl;
             return trajectory;
         }
     }
@@ -264,11 +262,6 @@ vector<double> Vehicle::GetKinematics(map<int, vector<Vehicle>> &predictions, in
     Vehicle vehicle_behind;
 
     if (GetVehicleAhead(predictions, lane, vehicle_ahead)) {
-//        if (GetVehicleBehind(predictions, lane, vehicle_behind)) {
-//            // must travel at the speed of traffic, regardless of preferred buffer
-//            new_velocity = vehicle_ahead.v;
-//        } else {
-            std::cout << "Front vehicle velocity: " << vehicle_ahead.v << std::endl;
         double max_velocity_in_front;
             if(vehicle_ahead.s < 300 && this->s > max_s -300) {
                 // Handle wrap around
@@ -282,11 +275,7 @@ vector<double> Vehicle::GetKinematics(map<int, vector<Vehicle>> &predictions, in
                                               - 0.5 * (this->a);
 
             }
-            std::cout << "Max velocity in front: " << max_velocity_in_front << std::endl;
-            std::cout << "vehicle_ahead.s: " << vehicle_ahead.s << " this->s: " << this->s << " vehicle_ahead.v: " << vehicle_ahead.v << " this->a: " << this->a << std::endl;
             new_velocity = std::min(std::min(max_velocity_in_front, max_velocity_accel_limit), this->target_speed);
-            std::cout << "Proposed new new_velocity: " << new_velocity << std::endl;
-//        }
     } else {
         new_velocity = std::min(max_velocity_accel_limit, this->target_speed);
     }
@@ -297,9 +286,9 @@ vector<double> Vehicle::GetKinematics(map<int, vector<Vehicle>> &predictions, in
     return{new_position, new_velocity, new_accel};
 }
 
+// Find the gap, use for tracking of gap
 string Vehicle::FindGap(map<int, vector<Vehicle>> &predictions, int lane, double &gap_s) {
   bool gap_found = false;
-  double min_gap_size = 15.0;
   string gap_location;
 
   // Attempt to find a next to vehicle
@@ -315,17 +304,17 @@ string Vehicle::FindGap(map<int, vector<Vehicle>> &predictions, int lane, double
     gap_location = gap_locations[1];
       gap_s = this->s;
   }
-  else if(vehicle_ahead_bool && !vehicle_behind_bool && (vehicle_ahead.s - this->s) > min_gap_size/2.0) {
+  else if(vehicle_ahead_bool && !vehicle_behind_bool && (vehicle_ahead.s - this->s) > min_gap/2.0) {
     // Vehicle ahead but no vehicle behind, check if distance to closest vehicle in front has sufficient gap relative to ego
     gap_found = true;
     gap_location = gap_locations[1];
     gap_s = this->s;
-  } else if(vehicle_behind_bool && !vehicle_ahead_bool && (this->s - vehicle_behind.s) > min_gap_size/2.0) {
+  } else if(vehicle_behind_bool && !vehicle_ahead_bool && (this->s - vehicle_behind.s) > min_gap/2.0) {
     // Vehicle behind but no vehicle ahead, check if distance to closest vehicle behind has sufficient gap to ego relative to ego
     gap_found = true;
     gap_location = gap_locations[1];
     gap_s = this->s;
-  } else if(vehicle_ahead_bool && vehicle_behind_bool && (vehicle_ahead.s - vehicle_behind.s)> min_gap_size) {
+  } else if(vehicle_ahead_bool && vehicle_behind_bool && (vehicle_ahead.s - vehicle_behind.s)> min_gap) {
     // Vehicle ahead and behind, check if gap between both vehicle have a sufficient gap
     gap_found = true;
     gap_location = gap_locations[1];
@@ -338,7 +327,7 @@ string Vehicle::FindGap(map<int, vector<Vehicle>> &predictions, int lane, double
 
       while(!gap_found) {
           if(GetVehicleBehind(predictions, lane, vehicle_behind2, vehicle_behind)) {
-              if(vehicle_behind.s - vehicle_behind2.s > min_gap_size) {
+              if(vehicle_behind.s - vehicle_behind2.s > min_gap) {
                   gap_found = true;
                   gap_location = gap_locations[2];
                   gap_s = (vehicle_behind.s - vehicle_behind2.s) / 2;
@@ -348,7 +337,7 @@ string Vehicle::FindGap(map<int, vector<Vehicle>> &predictions, int lane, double
           } else {
               gap_found = true;
               gap_location = gap_locations[2];
-              gap_s = vehicle_behind.s + min_gap_size / 2.0;
+              gap_s = vehicle_behind.s + min_gap / 2.0;
           }
       }
   }
@@ -382,8 +371,6 @@ bool Vehicle::GetVehicleBehind(map<int, vector<Vehicle>> &predictions, int lane,
         }
     }
 
-//    if(found_vehicle) { std::cout << "Found vehicle behind" << std::endl; }
-
     return found_vehicle;
 }
 
@@ -413,8 +400,6 @@ bool Vehicle::GetVehicleBehind(map<int, vector<Vehicle>> &predictions, int lane,
         }
     }
 
-//    if(found_vehicle) { std::cout << "Found vehicle behind" << std::endl; }
-
     return found_vehicle;
 }
 
@@ -428,9 +413,6 @@ bool Vehicle::GetVehicleAhead(map<int, vector<Vehicle>> &predictions, int lane, 
          it != predictions.end(); ++it) {
         temp_vehicle = it->second[0];
         if (temp_vehicle.lane == this->lane) {
-//            std::cout << "ego s: " << this->s << std::endl;
-//            std::cout << "vehicle id: " << it->first << " s: " << temp_vehicle.s << std::endl;
-
             // Handle wrap around
             if(this->s > max_s - 300 && temp_vehicle.s < 300
             && (temp_vehicle.s+max_s) < min_s) {
@@ -445,8 +427,6 @@ bool Vehicle::GetVehicleAhead(map<int, vector<Vehicle>> &predictions, int lane, 
             }
         }
     }
-
-//    if(found_vehicle) { std::cout << "Found vehicle ahead" << std::endl; }
 
     return found_vehicle;
 }

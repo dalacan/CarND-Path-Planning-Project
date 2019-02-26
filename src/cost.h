@@ -22,10 +22,20 @@ float lane_change_cost(const Vehicle &vehicle,
                         const map<int, vector<Vehicle>> &predictions,
                         map<string, float> &data);
 
+float out_of_lane_cost(const Vehicle &vehicle,
+                       const vector<Vehicle> &trajectory,
+                       const map<int, vector<Vehicle>> &predictions,
+                       map<string, float> &data);
+
 float change_lane_safe_cost(const Vehicle &vehicle,
                             const vector<Vehicle> &trajectory,
                             const map<int, vector<Vehicle>> &predictions,
                             map<string, float> &data);
+
+float lane_cost(const Vehicle &vehicle,
+                const vector<Vehicle> &trajectory,
+                const map<int, vector<Vehicle>> &predictions,
+                map<string, float> &data);
 
 bool get_vehicle_ahead(const map<int, vector<Vehicle>> &predictions, int lane, Vehicle &rVehicle);
 bool get_vehicle_behind(const map<int, vector<Vehicle>> &predictions, int lane, Vehicle &rVehicle);

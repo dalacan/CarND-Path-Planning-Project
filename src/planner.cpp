@@ -15,11 +15,11 @@ void Planner::SetParameters(int number_lanes, double lane_size, double speed_lim
   this->max_jerk = max_jerk;
 }
 
+// Update the ego vehicle localization data
 void Planner::SetEgo(double car_x, double car_y, double car_s, double car_d, double car_yaw, double car_speed, json &previous_path_x, json &previous_path_y) {
-
-
   string state = "CS";
   if(this->ego.state.compare("CS") != 0) {
+    // Set new state
     state = this->ego.state;
   }
 
@@ -27,14 +27,11 @@ void Planner::SetEgo(double car_x, double car_y, double car_s, double car_d, dou
   auto prev_path_x = previous_path_x;
   this->previous_path_x = previous_path_x;
   this->previous_path_y = previous_path_y;
-  std::cout << "set prev path size: " << prev_path_x.size() << std::endl;
+//  std::cout << "set prev path size: " << prev_path_x.size() << std::endl;
   this->previous_path_size = prev_path_x.size();
 
   if(previous_path_size>0) {
-//    ego.s = ego.PositionAt((double)this->previous_path_size*.02);
-//    ego.v = ego.VelocityAt((double)this->previous_path_size*.02);
-
-    // Use the previous path
+    // Use the previous path to set vehicle location
     double ref_x = previous_path_x[this->previous_path_size-1];
     double ref_y = previous_path_y[this->previous_path_size-1];
 
@@ -60,15 +57,17 @@ void Planner::SetEgo(double car_x, double car_y, double car_s, double car_d, dou
   int lane = highway.GetLaneNumber(car_d);
 
   Vehicle ego = Vehicle(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, state);
-  std::cout << "|   x   |   y   |   s   |   d   |  yaw   | speed | lane | state |" << std::endl;
-  std::cout << " " << car_x << " " << car_y << "  " << car_s << " " << car_d << " " << car_yaw << " " << car_speed << "    " << lane << "     " << state << std::endl;
+//  std::cout << "|   x   |   y   |   s   |   d   |  yaw   | speed | lane | state |" << std::endl;
+//  std::cout << " " << car_x << " " << car_y << "  " << car_s << " " << car_d << " " << car_yaw << " " << car_speed << "    " << lane << "     " << state << std::endl;
 
   ego.Configure(highway.num_lanes, this->speed_limit, this->max_acceleration);
 
   this->ego = ego;
 }
 
+// Update the detected vehicles to keep track of vehicles detected from sensor fusion.
 void Planner::UpdateDetectedVehicles(json sensor_fusion) {
+
   auto sensed_vehicles = sensor_fusion;
 
   vector<Vehicle> detected_vehicles;
@@ -95,7 +94,7 @@ void Planner::UpdateDetectedVehicles(json sensor_fusion) {
     }
 
     int lane = highway.GetLaneNumber(detected_car_d);
-    std::cout << "Detected car @ " << detected_car_id << ", lane: " << lane << ", velocity: " << detected_car_v << " d: " << detected_car_d <<  std::endl;
+//    std::cout << "Detected car @ " << detected_car_id << ", lane: " << lane << ", velocity: " << detected_car_v << " d: " << detected_car_d <<  std::endl;
 
     Vehicle vehicle = Vehicle(detected_car_id, detected_car_x, detected_car_y, detected_car_s, detected_car_d, detected_car_v, lane);
     vehicle.state = "CS";
@@ -105,8 +104,8 @@ void Planner::UpdateDetectedVehicles(json sensor_fusion) {
   this->detected_vehicles = detected_vehicles;
 }
 
+// Generate prediction for the ego and detected vehicles
 void Planner::GeneratePredictions(int horizon) {
-
   // Generate predictions for ego vehicle
   int ego_id = -1;
   this->predictions[ego_id] = this->ego.GeneratePredictions(horizon);
@@ -128,28 +127,29 @@ void Planner::GeneratePredictions(int horizon) {
   }
 }
 
+// Plan the next behavior for the ego vehicles for the current state and predictions
 void Planner::PlanBehavior() {
   vector<Vehicle> next_state = this->ego.ChooseNextState(this->predictions);
 
-  std::cout << "current state: " << ego.state << std::endl;
-  std::cout << "current  state lane: " << ego.lane << std::endl;
-  std::cout << "current  state s: " << ego.s << std::endl;
-  std::cout << "current  state v: " << ego.v << std::endl;
-  std::cout << "current  state a: " << ego.a << std::endl;
+//  std::cout << "current state: " << ego.state << std::endl;
+//  std::cout << "current  state lane: " << ego.lane << std::endl;
+//  std::cout << "current  state s: " << ego.s << std::endl;
+//  std::cout << "current  state v: " << ego.v << std::endl;
+//  std::cout << "current  state a: " << ego.a << std::endl;
 
   Vehicle nxt_state = next_state[1];
-  std::cout << "next state: " << nxt_state.state << std::endl;
-  std::cout << "next state lane: " << nxt_state.lane << std::endl;
-  std::cout << "next state s: " << nxt_state.s << std::endl;
-  std::cout << "next state v: " << nxt_state.v << std::endl;
-  std::cout << "next state a: " << nxt_state.a << std::endl;
-
+//  std::cout << "next state: " << nxt_state.state << std::endl;
+//  std::cout << "next state lane: " << nxt_state.lane << std::endl;
+//  std::cout << "next state s: " << nxt_state.s << std::endl;
+//  std::cout << "next state v: " << nxt_state.v << std::endl;
+//  std::cout << "next state a: " << nxt_state.a << std::endl;
 
   // Set next state
   this->ego_next_state = this->ego;
   ego_next_state.RealizeNextState(next_state);
 }
 
+// Generate trajectory for the specified planned state
 vector<vector<double>> Planner::GenerateTrajectory() {
   vector<double> next_x_vals;
   vector<double> next_y_vals;
@@ -240,21 +240,20 @@ vector<vector<double>> Planner::GenerateTrajectory() {
    * Calculate the required number of n intervals over the target distance for the
    * specified target reference velocity over 0.02 seconds (time at which the simulator
    * process each point).
-   * Note: The velocity in (mph) is divide by 2.24 to convert to metre per second
   */
   double x_add_on = 0;
-  std::cout << "Initial ref velocity: " << ref_vel << std::endl;
-  std::cout << "Target velocity: " << this->ego_next_state.v*2.24 << std::endl;
+//  std::cout << "Initial ref velocity: " << ref_vel << std::endl;
+//  std::cout << "Target velocity: " << this->ego_next_state.v*2.24 << std::endl;
   for (int i = 0; i < 50 - this->previous_path_size; i++) {
     // Calculate the next point relative to the car
     if(ref_vel <= this->ego_next_state.v*2.24) {
-//      ref_vel += 0.224;
-        ref_vel += 0.4032; // 0.448 = 10m/s2, 0.4256 = 9.5m/s2
+      ref_vel += 0.224;
+//        ref_vel += 0.4032; // 0.448 = 10m/s2, 0.4256 = 9.5m/s2
     } else if(ref_vel > this->ego_next_state.v*2.24) {
-//      ref_vel -= 0.224;
-        ref_vel -= 0.4032; // 0.448 = 10m/s2, 0.4256 = 9.5m/s2
+      ref_vel -= 0.224;
+//        ref_vel -= 0.4032; // 0.448 = 10m/s2, 0.4256 = 9.5m/s2
     }
-    std::cout << "Next Ref velocity: " << ref_vel << std::endl;
+//    std::cout << "Next Ref velocity: " << ref_vel << std::endl;
 
     double n = target_dist / (0.02 * ref_vel / 2.24);
 
