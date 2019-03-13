@@ -1,4 +1,9 @@
 # Model Documentation
+
+[//]: # (Image References)
+
+[fsm]: ./images/fsm.png "Finite State Machine"
+
 ## Overview
 The path planning model implements the following functionality:
 1. Ego Vehicle tracking
@@ -56,12 +61,14 @@ Once the prediction has been generated for all vehicles, the next step are:
 
 ### States
 The valid states of the vehicles are:
-- Constant speed (initial)
-- Keep lane
-- Prepare lane change left
-- Prepare lane change right
-- Lane change left
-- Lane change right 
+- Constant speed/initial state (CS)
+- Keep lane (KL)
+- Prepare lane change left (PLCL)
+- Prepare lane change right (PLCR)
+- Lane change left (LCL)
+- Lane change right (LCR)
+
+![alt-image][FSM]
 
 #### Constant speed state
 Properties:
@@ -76,7 +83,7 @@ Properties:
 - Stay near the centre line for the lane.
 - Drive at maximum legal speed if possible. If there is a vehicle in front, match vehicle speed.
 
-Successor StateS:
+Successor States:
 - Keep lane
 - Prepare lane change left
 - Prepare lane change right
@@ -86,7 +93,7 @@ Properties:
 - Stay near the centre line for the lane.
 - Attempt to match speed of left lane
 
-Successor StateS:
+Successor States:
 - Keep lane
 - Prepare lane change left
 - Lane change left
@@ -96,7 +103,7 @@ Properties:
 - Stay near the centre line for the lane.
 - Attempt to match speed of right lane
 
-Successor StateS:
+Successor States:
 - Keep lane
 - Prepare lane change right
 - Lane change right
@@ -106,7 +113,7 @@ Properties:
 - Move to the left lane
 - Drive at maximum legal speed if possible. If there is a vehicle in front, match vehicle speed.
 
-Successor StateS:
+Successor States:
 - Keep lane
 - Lane change left
 
@@ -115,7 +122,7 @@ Properties:
 - Move to the right lane
   - Drive at maximum legal speed if possible. If there is a vehicle in front, match vehicle speed.
 
-Successor StateS:
+Successor States:
 - Keep lane
 - Lane change right
 
